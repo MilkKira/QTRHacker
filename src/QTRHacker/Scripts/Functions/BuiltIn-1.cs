@@ -103,29 +103,57 @@ public class InfiniteLife : BaseFunction
 		switch (culture)
 		{
 			case "zh":
-				Name = "无限生命";
-				Tooltip = "免疫大部分伤害";
+				Name = "上帝模式";
+				Tooltip = "不受到任何伤害,免受绝大多数伤害,真正意义上的无敌";
 				break;
 			case "en":
 			default:
-				Name = "Infinite Life";
+				Name = "God Mode";
 				Tooltip = "Immune to most damages except continuous ones like burning";
 				break;
 		}
 	}
 	public override void Enable(GameContext ctx)
 	{
-		int off = GetOffset(ctx, "Terraria.Player", "statLife");
-		AobReplace(ctx, $"29 82 {AobscanHelper.GetMByteCode(off)} 83 7D", $"01 82 {AobscanHelper.GetMByteCode(off)} 83 7D");
-		IsEnabled = true;
-	}
+        //扣血指令
+		//int off = GetOffset(ctx, "Terraria.Player", "statLife");
+		//AobReplace(ctx, $"29 82 {AobscanHelper.GetMByteCode(off)} 83 7D", $"01 82 {AobscanHelper.GetMByteCode(off)} 83 7D");
+		//Hurt指令头
+		nuint hurtAddr = ScriptHelper.GetFunctionAddress(ctx, "Terraria.Player", "Hurt");
+		//绕过Hurt方法
+        nuint hurt1Addr = hurtAddr + 0x31;
+        nuint hurt2Addr = hurtAddr + 0x65;
+        byte[] originalHurt1Bytes = ctx.HContext.DataAccess.ReadBytes(hurt1Addr, 7);
+        byte[] originalHurt2Bytes = ctx.HContext.DataAccess.ReadBytes(hurt2Addr, 7);
+        byte[] patchCode1 = originalHurt1Bytes.ToArray();
+        byte[] patchCode2 = originalHurt2Bytes.ToArray();
+        patchCode1[6] = 0xFF;
+        patchCode2[6] = 0xFF;
+        ctx.HContext.DataAccess.WriteBytes(hurt1Addr, patchCode1);
+		ctx.HContext.DataAccess.WriteBytes(hurt2Addr, patchCode2);
+        IsEnabled = true;
+    }
 	public override void Disable(GameContext ctx)
 	{
-		int off = GetOffset(ctx, "Terraria.Player", "statLife");
-		AobReplace(ctx, $"01 82 {AobscanHelper.GetMByteCode(off)} 83 7D", $"29 82 {AobscanHelper.GetMByteCode(off)} 83 7D");
-		IsEnabled = false;
-	}
-}
+        //扣血指令
+        //int off = GetOffset(ctx, "Terraria.Player", "statLife");
+        //AobReplace(ctx, $"01 82 {AobscanHelper.GetMByteCode(off)} 83 7D", $"29 82 {AobscanHelper.GetMByteCode(off)} 83 7D");
+        //Hurt指令头
+        nuint hurtAddr = ScriptHelper.GetFunctionAddress(ctx, "Terraria.Player", "Hurt");
+        //还原Hurt方法
+        nuint hurt1Addr = hurtAddr + 0x31;
+        nuint hurt2Addr = hurtAddr + 0x65;
+        byte[] originalHurt1Bytes = ctx.HContext.DataAccess.ReadBytes(hurt1Addr, 7);
+        byte[] originalHurt2Bytes = ctx.HContext.DataAccess.ReadBytes(hurt2Addr, 7);
+        byte[] patchCode1 = originalHurt1Bytes.ToArray();
+        byte[] patchCode2 = originalHurt2Bytes.ToArray();
+        patchCode1[6] = 0x00;
+        patchCode2[6] = 0x00;
+        ctx.HContext.DataAccess.WriteBytes(hurt1Addr, patchCode1);
+        ctx.HContext.DataAccess.WriteBytes(hurt2Addr, patchCode2);
+        IsEnabled = false;
+    }
+} 
 
 public class InfiniteMana : BaseFunction
 {
@@ -150,8 +178,8 @@ public class InfiniteMana : BaseFunction
 		int off = GetOffset(ctx, "Terraria.Player", "statMana");
 		AobReplaceASM(ctx, $"add [esi+{off}],edi", $"sub [esi+{off}],edi");
 		AobReplaceASM(ctx, $"add [esi+{off}],eax", $"sub [esi+{off}],eax");
-		IsEnabled = false;
-	}
+        IsEnabled = false;
+    }
 }
 
 public class InfiniteOxygen : BaseFunction
@@ -305,38 +333,62 @@ public class HighLight : BaseFunction
 		{
 			case "zh":
 				Name = "全屏高亮";
-				Tooltip = "请将游戏内视频设置为\"彩色\"";
+				Tooltip = "支持游戏内任意照明模式，加快开启速度~";
 				break;
 			case "en":
 			default:
 				Name = "High Light";
-				Tooltip = "Please set Video -> Lighting to \"Color\"";
+				Tooltip = "Support All Lighting Function,Enjoy~";
 				break;
 		}
 	}
 	public override void Enable(GameContext ctx)
 	{
-		nuint[] a = Aobscan(
-			ctx,
-			@"C7 ** ** ******** D9 07 D9 45 F0 DF F1 DD D8 7A").ToArray();
-		if (!a.Any())
-			return;
-		InlineHook.Hook(ctx.HContext,
-			AssemblySnippet.FromASMCode(
-				@"mov dword ptr[ebp-0x10],0x3F800000
-mov dword ptr[ebp-0x14],0x3F800000
-mov dword ptr[ebp-0x18],0x3F800000"
-),
-				new HookParameters(a[0] + 7, 0x1000));
-		IsEnabled = true;
+        //nuint[] a = Aobscan(
+        //	ctx,
+        //	@"C7 ** ** ******** D9 07 D9 45 F0 DF F1 DD D8 7A").ToArray();
+        //if (!a.Any())
+        //	return;
+        //InlineHook.Hook(ctx.HContext,
+        //	AssemblySnippet.FromASMCode(
+        //		@"mov dword ptr[ebp-0x10],0x3F800000
+        //			mov dword ptr[ebp-0x14],0x3F800000
+        //			mov dword ptr[ebp-0x18],0x3F800000"
+        //			),
+        //		new HookParameters(a[0] + 7, 0x1000));
+
+        //Terraria.Graphics.Light.TileLightScanner::GetTileLight+FF
+
+        nuint TileLightAddr = ScriptHelper.GetFunctionAddress(ctx, "Terraria.Graphics.Light.TileLightScanner", "GetTileLight");
+		nuint RealTileLightAddr = TileLightAddr + 0xFF;
+        var asm = AssemblySnippet.FromASMCode(
+                                                                               @"push esi
+																					mov esi,[ebp+8]
+																					push 0x3F4CCCCD
+																					fld dword ptr [esp]
+																					fstp dword ptr [esi]
+																					fld dword ptr [esp]
+																					fstp dword ptr [esi+4]
+																					fld dword ptr [esp]
+																					fstp dword ptr [esi+8]
+																					add esp,4
+																					pop esi
+																					");
+        //jmp 0x{RealTileLightAddr:X}
+        InlineHook.Hook(ctx.HContext, asm, new HookParameters(RealTileLightAddr, 0x1000));
+        IsEnabled = true;
 	}
 	public override void Disable(GameContext ctx)
 	{
-		nuint[] a = Aobscan(ctx, "C7 ** ** ******** E9 ** ** ** ** DF F1 DD D8 7A").ToArray();
-		if (!a.Any())
-			return;
-		InlineHook.FreeHook(ctx.HContext, a[0] + 7);
-		IsEnabled = false;
+        //nuint[] a = Aobscan(ctx, "C7 ** ** ******** E9 ** ** ** ** DF F1 DD D8 7A").ToArray();
+        //if (!a.Any())
+        //	return;
+        //InlineHook.FreeHook(ctx.HContext, a[0] + 7)
+
+        nuint TileLightAddr = ScriptHelper.GetFunctionAddress(ctx, "Terraria.Graphics.Light.TileLightScanner", "GetTileLight");
+        nuint RealTileLightAddr = TileLightAddr + 0xFF;
+		InlineHook.FreeHook(ctx.HContext, RealTileLightAddr);
+        IsEnabled = false;
 	}
 }
 

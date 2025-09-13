@@ -307,6 +307,44 @@ public class StrengthenVampireKnives : BaseFunction
 	}
 }
 
+public class RemoveNPCImmunityFrames : BaseFunction
+{
+    public override bool CanDisable => true;
+    public override void ApplyLocalization(string culture)
+    {
+        switch (culture)
+        {
+            case "zh":
+                Name = "移除NPC弹幕无敌帧";
+                Tooltip = "当一个弹幕击中NPC后，NPC不会进入无敌状态";
+                break;
+            case "en":
+            default:
+                Name = "Remove NPC Immunity Frames";
+                Tooltip = "When a projectile hits an NPC, NPC wont enter invincibility mode.";
+                break;
+        }
+    }
+    public override void Enable(GameContext ctx)
+    {
+		nuint x = ScriptHelper.GetFunctionAddress(ctx, "Terraria.Projectile", "Damage");
+		x += 0xF4E;
+		byte[] o = ctx.HContext.DataAccess.ReadBytes(x, 3);
+        byte[] patchCode = { 0xB0, 0x01, 0x90 };
+        ctx.HContext.DataAccess.WriteBytes(x, patchCode);
+         IsEnabled = true;
+    }
+    public override void Disable(GameContext ctx)
+    {
+        nuint x = ScriptHelper.GetFunctionAddress(ctx, "Terraria.Projectile", "Damage");
+        x += 0xF4E;
+        byte[] o = ctx.HContext.DataAccess.ReadBytes(x, 3);
+        byte[] patchCode = { 0x0F, 0x94, 0xC0 };
+        ctx.HContext.DataAccess.WriteBytes(x, patchCode);
+        IsEnabled = false;
+    }
+}
+
 
 public class BuiltIn_2 : FunctionCategory
 {
@@ -324,5 +362,6 @@ public class BuiltIn_2 : FunctionCategory
 		Add<FishCratesOnly>();
 		Add<EnableAllRecipes>();
 		Add<StrengthenVampireKnives>();
+		Add<RemoveNPCImmunityFrames>();
 	}
 }
