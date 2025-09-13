@@ -17,6 +17,14 @@
 		<UseAppHost>true</UseAppHost>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <DebugType>none</DebugType>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+	  <DebugType>none</DebugType>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<None Include="$(SolutionDir)res\**" CopyToOutputDirectory="PreserveNewest" Visible="True" />
 	</ItemGroup>
